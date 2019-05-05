@@ -10,9 +10,14 @@ from datetime import datetime
 # see: https://github.com/matplotlib/mpl_finance
 from mpl_finance import candlestick_ochl as candlestick
 
-style.use('ggplot')
+# style.use('ggplot')
+style.use('dark_background')
 
 VOLUME_CHART_HEIGHT = 0.33
+UP_COLOR = '#27A59A'
+DOWN_COLOR = '#EF534F'
+UP_TEXT_COLOR = '#73D3CC'
+DOWN_TEXT_COLOR = '#DC2C27'
 
 
 class BitcoinTradingGraph:
@@ -57,7 +62,7 @@ class BitcoinTradingGraph:
         legend = self.net_worth_ax.legend(loc=2, ncol=2, prop={'size': 8})
         legend.get_frame().set_alpha(0.4)
 
-        last_date = self.df['Timestamp'].values[current_step]
+        last_date = self.df['Date'].values[current_step]
         last_net_worth = self.net_worths[current_step]
 
         # Annotate the current net worth on the net worth graph
@@ -77,18 +82,19 @@ class BitcoinTradingGraph:
 
         # Format data for OHCL candlestick graph
         candlesticks = zip(dates,
-                           self.df['Open'].values[step_range], self.df['Close'].values[step_range],
-                           self.df['High'].values[step_range], self.df['Low'].values[step_range])
+                           self.df['open'].values[step_range], self.df['close'].values[step_range],
+                           self.df['high'].values[step_range], self.df['low'].values[step_range])
 
         # Plot price using candlestick graph from mpl_finance
-        candlestick(self.price_ax, candlesticks, width=2)
+        candlestick(self.price_ax, candlesticks, width=1, colorup=UP_COLOR, colordown=DOWN_COLOR)
+        # candlestick(self.price_ax, candlesticks, width=2)
 
-        last_date = self.df['Timestamp'].values[current_step]
-        last_close = self.df['Close'].values[current_step]
-        last_high = self.df['High'].values[current_step]
+        last_date = self.df['Date'].values[current_step]
+        last_close = self.df['close'].values[current_step]
+        last_high = self.df['high'].values[current_step]
 
         # Print the current price to the price axis
-        self.price_ax.annotate('{0:.2f}'.format(last_close), (last_date, last_close),
+        self.price_ax.annotate('{0:.4f}'.format(last_close), (last_date, last_close),
                                xytext=(last_date, last_high),
                                bbox=dict(boxstyle='round',
                                          fc='w', ec='k', lw=1),
@@ -103,33 +109,36 @@ class BitcoinTradingGraph:
     def _render_volume(self, current_step, net_worth, step_range, dates):
         self.volume_ax.clear()
 
-        volume = np.array(self.df['Volume_(BTC)'].values[step_range])
+        volume = np.array(self.df['volumefrom'].values[step_range])
 
-        pos = self.df['Open'].values[step_range] - \
-            self.df['Close'].values[step_range] < 0
-        neg = self.df['Open'].values[step_range] - \
-            self.df['Close'].values[step_range] > 0
+        pos = self.df['open'].values[step_range] - \
+            self.df['close'].values[step_range] < 0
+        neg = self.df['open'].values[step_range] - \
+            self.df['close'].values[step_range] > 0
 
         # Color volume bars based on price direction on that date
-        self.volume_ax.bar(dates[pos], volume[pos], width=2,  color='g')
-        self.volume_ax.bar(dates[neg], volume[neg], width=2, color='r')
-
+        self.volume_ax.bar(dates[pos], volume[pos], color=UP_COLOR,
+                           alpha=0.4, width=1, align='center')
+        self.volume_ax.bar(dates[neg], volume[neg], color=DOWN_COLOR,
+                           alpha=0.4, width=1, align='center')
+        print(volume[pos])
+        self.volume_ax.set_ylim(0, max(volume) / VOLUME_CHART_HEIGHT)
         self.volume_ax.yaxis.set_ticks([])
 
     def _render_trades(self, current_step, trades, step_range):
         for trade in trades:
             if trade['step'] in step_range:
-                date = self.df['Timestamp'].values[trade['step']]
-                close = self.df['Close'].values[trade['step']]
-                high = self.df['High'].values[trade['step']]
-                low = self.df['Low'].values[trade['step']]
+                date = self.df['Date'].values[trade['step']]
+                close = self.df['close'].values[trade['step']]
+                high = self.df['high'].values[trade['step']]
+                low = self.df['low'].values[trade['step']]
 
                 if trade['type'] == 'buy':
                     high_low = low
-                    color = 'g'
+                    color = UP_TEXT_COLOR
                 else:
                     high_low = high
-                    color = 'r'
+                    color = DOWN_TEXT_COLOR
 
                 total = '{0:.2f}'.format(trade['total'])
 
@@ -146,7 +155,7 @@ class BitcoinTradingGraph:
 
         window_start = max(current_step - window_size, 0)
         step_range = range(window_start, current_step + 1)
-        dates = self.df['Timestamp'].values[step_range]
+        dates = self.df['Date'].values[step_range]
 
         self._render_net_worth(current_step, net_worth, step_range, dates)
         self._render_price(current_step, net_worth, step_range, dates)
@@ -154,7 +163,7 @@ class BitcoinTradingGraph:
         self._render_trades(current_step, trades, step_range)
 
         date_labels = np.array([datetime.utcfromtimestamp(x).strftime(
-            '%Y-%m-%d %H:%M') for x in self.df['Timestamp'].values[step_range]])
+            '%Y-%m-%d %H:%M') for x in self.df['Date'].values[step_range]])
 
         self.price_ax.set_xticklabels(
             date_labels, rotation=45, horizontalalignment='right')
