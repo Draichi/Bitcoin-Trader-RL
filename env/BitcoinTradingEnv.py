@@ -35,11 +35,11 @@ class BitcoinTradingEnv(gym.Env):
         end = self.current_step + self.lookback_window_size + 1
 
         obs = np.array([
-            self.active_df['Open'].values[self.current_step:end],
-            self.active_df['High'].values[self.current_step:end],
-            self.active_df['Low'].values[self.current_step:end],
-            self.active_df['Close'].values[self.current_step:end],
-            self.active_df['Volume_(BTC)'].values[self.current_step:end],
+            self.active_df['open'].values[self.current_step:end],
+            self.active_df['high'].values[self.current_step:end],
+            self.active_df['low'].values[self.current_step:end],
+            self.active_df['close'].values[self.current_step:end],
+            self.active_df['volumefrom'].values[self.current_step:end],
         ])
 
         scaled_history = self.scaler.fit_transform(self.account_history)
@@ -85,7 +85,7 @@ class BitcoinTradingEnv(gym.Env):
         return self._next_observation()
 
     def _get_current_price(self):
-        return self.df['Close'].values[self.frame_start + self.current_step]
+        return self.df['close'].values[self.frame_start + self.current_step]
 
     def _take_action(self, action, current_price):
         action_type = action[0]
